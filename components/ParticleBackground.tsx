@@ -16,14 +16,14 @@ export default function ParticleBackground() {
 
     // Set canvas size
     const setCanvasSize = () => {
-      if (typeof window !== 'undefined') {  // Check for browser environment
+      if (typeof window !== 'undefined' && canvas) {
         canvas.width = window.innerWidth
         canvas.height = window.innerHeight
       }
     }
     setCanvasSize()
 
-    if (typeof window !== 'undefined') {  // Check for browser environment
+    if (typeof window !== 'undefined') {
       window.addEventListener('resize', setCanvasSize)
     }
 
@@ -35,10 +35,14 @@ export default function ParticleBackground() {
       speedX: number
       speedY: number
       opacity: number
+      canvasWidth: number
+      canvasHeight: number
 
       constructor() {
-        this.x = Math.random() * canvas.width
-        this.y = Math.random() * canvas.height
+        this.canvasWidth = canvas.width
+        this.canvasHeight = canvas.height
+        this.x = Math.random() * this.canvasWidth
+        this.y = Math.random() * this.canvasHeight
         this.size = Math.random() * 3 + 1
         this.speedX = Math.random() * 0.5 - 0.25
         this.speedY = Math.random() * 0.5 - 0.25
@@ -49,10 +53,10 @@ export default function ParticleBackground() {
         this.x += this.speedX
         this.y += this.speedY
 
-        if (this.x > canvas.width) this.x = 0
-        if (this.x < 0) this.x = canvas.width
-        if (this.y > canvas.height) this.y = 0
-        if (this.y < 0) this.y = canvas.height
+        if (this.x > this.canvasWidth) this.x = 0
+        if (this.x < 0) this.x = this.canvasWidth
+        if (this.y > this.canvasHeight) this.y = 0
+        if (this.y < 0) this.y = this.canvasHeight
       }
 
       draw() {
@@ -72,7 +76,7 @@ export default function ParticleBackground() {
 
     // Animation loop
     const animate = () => {
-      if (!ctx) return
+      if (!ctx || !canvas) return
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       
       particles.forEach(particle => {
