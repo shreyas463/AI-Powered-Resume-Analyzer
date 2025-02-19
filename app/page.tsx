@@ -1,13 +1,10 @@
 import ResumeUploader from '../components/ResumeUploader'
-import ParticleBackground from '../components/ParticleBackground'
 import Link from 'next/link'
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-blue-900 to-blue-800 relative overflow-hidden">
-      <ParticleBackground />
-      
-      {/* Updated Navigation with red background */}
+      {/* Navigation with red background */}
       <nav className="absolute top-0 left-0 w-full bg-red-600">
         <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center">
