@@ -7,73 +7,108 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 const pdfjsWorker = require('pdfjs-dist/build/pdf.worker.entry')
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
-// Keywords to look for in resumes
-const SKILL_KEYWORDS = {
-  technical: [
-    'javascript', 'python', 'java', 'react', 'node', 'sql', 'aws', 'docker',
-    'kubernetes', 'mongodb', 'typescript', 'git', 'ci/cd', 'html', 'css'
-  ],
-  soft: [
-    'leadership', 'communication', 'teamwork', 'problem solving', 'project management',
-    'agile', 'scrum', 'collaboration', 'analytical', 'time management'
-  ],
+// Enhanced keywords and categories for resume analysis
+const RESUME_CRITERIA = {
+  technicalSkills: {
+    programming: [
+      'javascript', 'python', 'java', 'c++', 'ruby', 'swift', 'kotlin', 'go',
+      'rust', 'php', 'typescript', 'scala', 'r', 'matlab'
+    ],
+    webTechnologies: [
+      'react', 'angular', 'vue', 'node.js', 'express', 'django', 'flask',
+      'html5', 'css3', 'sass', 'webpack', 'babel', 'jquery', 'bootstrap'
+    ],
+    databases: [
+      'sql', 'mysql', 'postgresql', 'mongodb', 'redis', 'elasticsearch',
+      'cassandra', 'oracle', 'dynamodb', 'firebase'
+    ],
+    cloud: [
+      'aws', 'azure', 'gcp', 'docker', 'kubernetes', 'terraform', 'jenkins',
+      'circleci', 'github actions', 'serverless', 'lambda'
+    ],
+    tools: [
+      'git', 'jira', 'confluence', 'bitbucket', 'gitlab', 'vscode', 'intellij',
+      'postman', 'swagger', 'figma', 'sketch'
+    ]
+  },
+  softSkills: {
+    leadership: [
+      'leadership', 'team lead', 'managed', 'supervised', 'mentored', 'directed',
+      'coordinated', 'spearheaded', 'initiated'
+    ],
+    communication: [
+      'communication', 'presentation', 'documentation', 'client interaction',
+      'stakeholder', 'collaboration', 'interpersonal', 'public speaking'
+    ],
+    projectManagement: [
+      'agile', 'scrum', 'kanban', 'waterfall', 'sprint planning', 'roadmap',
+      'project management', 'risk management', 'budget', 'timeline'
+    ],
+    problemSolving: [
+      'problem solving', 'analytical', 'troubleshooting', 'debugging',
+      'optimization', 'innovation', 'strategic thinking', 'research'
+    ]
+  },
   certifications: [
     'aws certified', 'google certified', 'microsoft certified', 'cisco certified',
-    'pmp', 'scrum master', 'comptia'
+    'pmp', 'scrum master', 'comptia', 'cka', 'ceh', 'cissp', 'itil'
+  ],
+  education: [
+    'bachelor', 'master', 'phd', 'degree', 'university', 'college',
+    'certification', 'diploma'
+  ],
+  experience: [
+    'years of experience', 'work history', 'professional experience',
+    'employment history', 'career history'
+  ],
+  achievements: [
+    'achieved', 'improved', 'increased', 'reduced', 'saved', 'awarded',
+    'recognized', 'delivered', 'implemented', 'launched', 'developed'
+  ],
+  metrics: [
+    '%', 'percent', 'million', 'billion', 'k', 'users', 'customers',
+    'revenue', 'cost', 'budget', 'roi', 'kpi'
   ]
 }
 
-// Add resume validation criteria
-const RESUME_INDICATORS = {
-  sections: [
-    'education',
-    'experience',
-    'skills',
-    'work history',
-    'employment',
-    'qualification',
-    'professional summary',
-    'objective'
-  ],
-  contactInfo: [
-    'email',
-    'phone',
-    '@',
-    'linkedin',
-    'github'
-  ]
-}
+// Resume sections that should be present
+const ESSENTIAL_SECTIONS = [
+  'summary',
+  'experience',
+  'education',
+  'skills',
+  'contact'
+]
 
 function isValidResume(text: string): { isValid: boolean; reason?: string } {
   const textLower = text.toLowerCase()
   
-  // Check minimum length (roughly 200 words)
-  if (text.split(/\s+/).length < 200) {
+  // Check minimum length (roughly 300 words for a professional resume)
+  if (text.split(/\s+/).length < 300) {
     return { 
       isValid: false, 
-      reason: 'Document is too short to be a resume. A typical resume should be at least 200 words.' 
+      reason: 'Resume appears too brief. A professional resume typically contains at least 300 words.' 
     }
   }
 
-  // Check for essential resume sections
-  const foundSections = RESUME_INDICATORS.sections.filter(section => 
-    textLower.includes(section.toLowerCase())
+  // Check for essential sections
+  const missingSections = ESSENTIAL_SECTIONS.filter(section => 
+    !textLower.includes(section.toLowerCase())
   )
-  if (foundSections.length < 2) {
+  
+  if (missingSections.length > 2) {
     return { 
       isValid: false, 
-      reason: 'Document appears to be missing essential resume sections like education, experience, or skills.' 
+      reason: `Resume is missing essential sections: ${missingSections.join(', ')}` 
     }
   }
 
-  // Check for contact information
-  const hasContactInfo = RESUME_INDICATORS.contactInfo.some(item => 
-    textLower.includes(item.toLowerCase())
-  )
-  if (!hasContactInfo) {
+  // Check for contact information (email pattern)
+  const emailPattern = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/
+  if (!emailPattern.test(text)) {
     return { 
       isValid: false, 
-      reason: 'No contact information found. A resume should include email, phone, or other contact details.' 
+      reason: 'No valid email address found. Professional resumes should include contact information.' 
     }
   }
 
@@ -82,67 +117,144 @@ function isValidResume(text: string): { isValid: boolean; reason?: string } {
 
 function analyzeResume(text: string) {
   const textLower = text.toLowerCase()
+  const words = text.split(/\s+/)
   
-  // First validate if it's a resume
+  // Validate resume
   const validation = isValidResume(text)
   if (!validation.isValid) {
     throw new Error(validation.reason || 'Invalid resume format')
   }
   
-  // Find skills
-  const foundSkills = {
-    technical: SKILL_KEYWORDS.technical.filter(skill => textLower.includes(skill.toLowerCase())),
-    soft: SKILL_KEYWORDS.soft.filter(skill => textLower.includes(skill.toLowerCase())),
-    certifications: SKILL_KEYWORDS.certifications.filter(cert => textLower.includes(cert.toLowerCase()))
+  // Initialize scoring categories
+  const analysis = {
+    technicalSkills: {
+      programming: [],
+      webTechnologies: [],
+      databases: [],
+      cloud: [],
+      tools: []
+    },
+    softSkills: {
+      leadership: [],
+      communication: [],
+      projectManagement: [],
+      problemSolving: []
+    },
+    certifications: [],
+    metrics: [],
+    achievements: []
   }
-
-  // Calculate score based on various factors
-  let score = 70 // Base score
   
-  // Add points for skills
-  score += Math.min(20, foundSkills.technical.length * 2) // Up to 20 points for technical skills
-  score += Math.min(10, foundSkills.soft.length * 2) // Up to 10 points for soft skills
-  score += Math.min(10, foundSkills.certifications.length * 5) // Up to 10 points for certifications
+  // Analyze each category
+  Object.entries(RESUME_CRITERIA.technicalSkills).forEach(([category, keywords]) => {
+    analysis.technicalSkills[category] = keywords.filter(skill => 
+      textLower.includes(skill.toLowerCase())
+    )
+  })
+  
+  Object.entries(RESUME_CRITERIA.softSkills).forEach(([category, keywords]) => {
+    analysis.softSkills[category] = keywords.filter(skill => 
+      textLower.includes(skill.toLowerCase())
+    )
+  })
+  
+  analysis.certifications = RESUME_CRITERIA.certifications.filter(cert => 
+    textLower.includes(cert.toLowerCase())
+  )
+  
+  analysis.metrics = RESUME_CRITERIA.metrics.filter(metric => 
+    textLower.includes(metric.toLowerCase())
+  )
+  
+  analysis.achievements = RESUME_CRITERIA.achievements.filter(achievement => 
+    textLower.includes(achievement.toLowerCase())
+  )
 
-  // Check for education section
-  if (textLower.includes('education') || textLower.includes('university') || textLower.includes('degree')) {
-    score += 5
-  }
+  // Calculate comprehensive score
+  let score = 50 // Base score
+  
+  // Technical skills scoring (max 25 points)
+  const technicalSkillsCount = Object.values(analysis.technicalSkills)
+    .reduce((sum, skills) => sum + skills.length, 0)
+  score += Math.min(25, technicalSkillsCount * 2)
+  
+  // Soft skills scoring (max 15 points)
+  const softSkillsCount = Object.values(analysis.softSkills)
+    .reduce((sum, skills) => sum + skills.length, 0)
+  score += Math.min(15, softSkillsCount * 2)
+  
+  // Certifications (max 10 points)
+  score += Math.min(10, analysis.certifications.length * 5)
+  
+  // Quantifiable achievements (max 15 points)
+  const hasMetrics = analysis.metrics.length > 0
+  const hasAchievements = analysis.achievements.length > 0
+  score += hasMetrics ? 8 : 0
+  score += Math.min(7, analysis.achievements.length)
+  
+  // Format and length (max 5 points)
+  score += words.length >= 400 ? 5 : 
+           words.length >= 300 ? 3 : 0
 
-  // Check for experience section
-  if (textLower.includes('experience') || textLower.includes('work history')) {
-    score += 5
-  }
-
-  // Generate improvements
+  // Generate professional insights
   const improvements = []
-  if (foundSkills.technical.length < 4) {
-    improvements.push('Add more technical skills relevant to your field')
+  const strengths = []
+  
+  // Technical skills analysis
+  if (technicalSkillsCount < 6) {
+    improvements.push('Enhance your technical skill set with more industry-relevant technologies')
+  } else {
+    strengths.push('Strong technical foundation across multiple domains')
   }
-  if (foundSkills.soft.length < 3) {
-    improvements.push('Include more soft skills and interpersonal abilities')
+  
+  // Soft skills analysis
+  if (softSkillsCount < 4) {
+    improvements.push('Incorporate more leadership and communication examples')
+  } else {
+    strengths.push('Well-rounded soft skills profile')
   }
-  if (!textLower.includes('achievement') && !textLower.includes('accomplished')) {
-    improvements.push('Add specific achievements and quantifiable results')
+  
+  // Achievements analysis
+  if (!hasMetrics) {
+    improvements.push('Add quantifiable achievements and metrics to demonstrate impact')
+  } else {
+    strengths.push('Strong results-oriented profile with measurable achievements')
   }
-  if (foundSkills.certifications.length === 0) {
-    improvements.push('Consider adding relevant certifications')
-  }
-  if (!textLower.includes('project')) {
-    improvements.push('Include relevant project experience')
+  
+  // Certifications analysis
+  if (analysis.certifications.length === 0) {
+    improvements.push('Consider adding relevant professional certifications')
+  } else {
+    strengths.push('Professional credentials demonstrate commitment to growth')
   }
 
-  // Determine job fit
-  const jobFit = score >= 85 ? 'Excellent fit for technical roles' :
-                 score >= 70 ? 'Good fit with some areas for improvement' :
-                 'Consider enhancing resume with suggested improvements'
+  // Determine professional assessment
+  const professionalAssessment = score >= 90 ? 'Outstanding professional profile' :
+                                score >= 80 ? 'Strong candidate with proven expertise' :
+                                score >= 70 ? 'Solid profile with room for enhancement' :
+                                'Profile needs significant improvement'
+
+  // Identify key differentiators
+  const keyDifferentiators = [
+    ...new Set([
+      ...Object.values(analysis.technicalSkills).flat(),
+      ...Object.values(analysis.softSkills).flat(),
+      ...analysis.certifications
+    ])
+  ].slice(0, 10)
 
   return {
-    summary: `Resume shows ${foundSkills.technical.length} technical skills and ${foundSkills.soft.length} soft skills. ${jobFit.toLowerCase()}.`,
-    keywords: [...foundSkills.technical, ...foundSkills.soft].slice(0, 8),
-    improvements: improvements.slice(0, 4),
     score,
-    jobFit
+    professionalAssessment,
+    strengths: strengths.slice(0, 3),
+    improvements: improvements.slice(0, 3),
+    keyDifferentiators,
+    details: {
+      technicalSkills: analysis.technicalSkills,
+      softSkills: analysis.softSkills,
+      certifications: analysis.certifications,
+      hasQuantifiableAchievements: hasMetrics
+    }
   }
 }
 
@@ -232,4 +344,4 @@ export async function POST(request: Request) {
       { status: 500 }
     )
   }
-} 
+}

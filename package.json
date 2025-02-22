@@ -16,7 +16,8 @@
     "openai": "4.20.1",
     "pdfjs-dist": "^3.11.174",
     "react": "18.2.0",
-    "react-dom": "18.2.0"
+    "react-dom": "18.2.0",
+    "react-icons": "^5.5.0"
   },
   "devDependencies": {
     "@types/node": "20.8.2",

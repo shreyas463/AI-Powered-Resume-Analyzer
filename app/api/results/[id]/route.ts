@@ -1,33 +1,25 @@
 import { NextResponse } from 'next/server'
+import { db } from '@/lib/firebase'
+import { doc, getDoc } from 'firebase/firestore'
 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    // In a real application, you would fetch the results from a database
-    // For now, we'll return mock data
-    const mockAnalysis = {
-      summary: "Your resume demonstrates strong technical skills and professional experience. The format is clear and well-structured, making it easy for both ATS systems and human recruiters to parse.",
-      keywords: [
-        "React",
-        "TypeScript",
-        "Node.js",
-        "Project Management",
-        "Team Leadership",
-        "Agile Development"
-      ],
-      improvements: [
-        "Consider adding more quantifiable achievements",
-        "Include specific metrics and results from your projects",
-        "Add relevant certifications if available",
-        "Strengthen your professional summary"
-      ],
-      score: 85,
-      jobFit: "Strong match for software development roles"
+    const analysisRef = doc(db, 'analyses', params.id)
+    const analysisSnap = await getDoc(analysisRef)
+
+    if (!analysisSnap.exists()) {
+      return NextResponse.json(
+        { error: 'Analysis not found' },
+        { status: 404 }
+      )
     }
 
-    return NextResponse.json(mockAnalysis)
+    const analysis = analysisSnap.data()
+
+    return NextResponse.json(analysis)
   } catch (error) {
     console.error('Error fetching analysis results:', error)
     return NextResponse.json(
@@ -35,4 +27,4 @@ export async function GET(
       { status: 500 }
     )
   }
-} 
+}

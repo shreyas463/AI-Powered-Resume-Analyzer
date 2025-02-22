@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import ErrorMessage from './ErrorMessage'
 import { useAuth } from '@/contexts/AuthContext'
+import { FiUploadCloud, FiFile, FiCheck, FiLoader } from 'react-icons/fi'
 
 export default function ResumeUploader() {
   const { user } = useAuth()
@@ -11,6 +11,13 @@ export default function ResumeUploader() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!user) {
+      router.push('/auth/signin')
+    }
+  }, [user, router])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
@@ -59,25 +66,30 @@ export default function ResumeUploader() {
     }
   }
 
-  const LoadingSpinner = () => (
-    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-    </svg>
-  )
+  if (!user) {
+    return null
+  }
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+    <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700 overflow-hidden shadow-xl">
       <div className="p-8">
-        <h2 className="text-2xl font-semibold text-gray-900 mb-2">Upload Your Resume</h2>
-        <p className="text-gray-600 mb-6">Get detailed analysis and improvement suggestions</p>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-semibold text-white">Upload Your Resume</h2>
+            <p className="text-slate-400">Get detailed analysis and improvement suggestions</p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-slate-400">Logged in as</p>
+            <p className="text-cyan-400 font-medium">{user.displayName || user.email}</p>
+          </div>
+        </div>
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div 
-            className={`relative border-2 border-dashed rounded-xl p-8 transition-all duration-200 ease-in-out
+            className={`relative border-2 border-dashed rounded-xl transition-all duration-300 ease-in-out
               ${file 
-                ? 'border-green-400 bg-green-50 hover:bg-green-100' 
-                : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+                ? 'border-cyan-400/50 bg-cyan-500/5' 
+                : 'border-slate-700 hover:border-blue-500/50 hover:bg-blue-500/5'
               } cursor-pointer group`}
             onClick={() => document.getElementById('resume-upload')?.click()}
           >
@@ -89,53 +101,50 @@ export default function ResumeUploader() {
               id="resume-upload"
             />
             
-            <div className="space-y-4 text-center">
+            <div className="space-y-4 text-center py-12">
               {file ? (
                 <>
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                    <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
+                  <div className="w-16 h-16 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-500/20 flex items-center justify-center mx-auto">
+                    <FiCheck className="w-8 h-8 text-cyan-400" />
                   </div>
                   <div>
-                    <p className="text-lg font-medium text-green-600">{file.name}</p>
-                    <p className="text-sm text-green-500">Click to change file</p>
+                    <p className="text-lg font-medium text-cyan-400">{file.name}</p>
+                    <p className="text-slate-400 mt-1">Click to change file</p>
                   </div>
                 </>
               ) : (
                 <>
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto group-hover:bg-blue-100">
-                    <svg className="w-8 h-8 text-gray-400 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
+                  <div className="w-16 h-16 rounded-xl bg-gradient-to-r from-blue-500/10 to-cyan-500/10 flex items-center justify-center mx-auto border border-blue-500/20 group-hover:border-blue-500/40">
+                    <FiUploadCloud className="w-8 h-8 text-blue-400 group-hover:text-blue-300" />
                   </div>
                   <div>
-                    <p className="text-lg font-medium text-gray-700 group-hover:text-blue-600">
-                      Drop your resume here or click to upload
-                    </p>
-                    <p className="text-sm text-gray-500">Supports PDF format only</p>
+                    <p className="text-lg font-medium text-white">Drop your resume here</p>
+                    <p className="text-slate-400 mt-1">Supports PDF format only</p>
                   </div>
                 </>
               )}
             </div>
           </div>
 
-          {error && <ErrorMessage message={error} />}
+          {error && (
+            <div className="rounded-lg bg-red-500/10 border border-red-500/50 p-4">
+              <p className="text-red-400 text-sm">{error}</p>
+            </div>
+          )}
 
           <button
             type="submit"
             disabled={!file || loading}
-            className={`w-full py-4 px-6 rounded-xl text-white font-medium text-lg 
-              flex items-center justify-center transition-all duration-200
-              ${!file || loading
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700 shadow-lg hover:shadow-xl'
-              }`}
+            className={`w-full rounded-xl py-4 px-6 flex items-center justify-center text-white font-medium
+              ${!file || loading 
+                ? 'bg-slate-700 cursor-not-allowed' 
+                : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 shadow-lg shadow-blue-500/20'
+              } transition-all duration-200`}
           >
             {loading ? (
               <>
-                <LoadingSpinner />
-                Analyzing Resume...
+                <FiLoader className="animate-spin -ml-1 mr-3 h-5 w-5" />
+                Analyzing...
               </>
             ) : (
               'Analyze Resume'
@@ -145,4 +154,4 @@ export default function ResumeUploader() {
       </div>
     </div>
   )
-} 
+}
