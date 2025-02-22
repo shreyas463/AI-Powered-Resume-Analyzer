@@ -2,7 +2,7 @@
 
 import ResumeUploader from '../components/ResumeUploader'
 import Link from 'next/link'
-import { FiAward, FiCpu, FiTarget } from 'react-icons/fi'
+import { FiAward, FiCpu, FiTarget, FiEdit3, FiUpload } from 'react-icons/fi'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 
@@ -83,7 +83,41 @@ export default function Home() {
         
         <div className="max-w-4xl mx-auto mb-32">
           {user ? (
-            <ResumeUploader />
+            <>
+              <div className="flex flex-col md:flex-row gap-8 w-full max-w-4xl">
+                <Link 
+                  href="/create"
+                  className="flex-1 group p-8 bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700 
+                         hover:bg-slate-800/70 transition-all duration-200 hover:border-blue-500/50"
+                >
+                  <div className="flex flex-col items-center text-center">
+                    <FiEdit3 className="w-12 h-12 text-blue-400 mb-4" />
+                    <h2 className="text-2xl font-bold text-white mb-2">Create New Resume</h2>
+                    <p className="text-slate-300">Build a professional resume with our AI-powered assistant</p>
+                  </div>
+                </Link>
+
+                <Link 
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    document.getElementById('resume-uploader')?.scrollIntoView({ behavior: 'smooth' })
+                  }}
+                  className="flex-1 group p-8 bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700 
+                         hover:bg-slate-800/70 transition-all duration-200 hover:border-blue-500/50"
+                >
+                  <div className="flex flex-col items-center text-center">
+                    <FiUpload className="w-12 h-12 text-blue-400 mb-4" />
+                    <h2 className="text-2xl font-bold text-white mb-2">Analyze Existing Resume</h2>
+                    <p className="text-slate-300">Get insights and suggestions to improve your current resume</p>
+                  </div>
+                </Link>
+              </div>
+
+              <div id="resume-uploader" className="w-full max-w-4xl mt-12">
+                <ResumeUploader />
+              </div>
+            </>
           ) : (
             <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700 overflow-hidden shadow-xl p-8 text-center">
               <h3 className="text-xl font-semibold text-white mb-4">Sign in to Upload Your Resume</h3>
