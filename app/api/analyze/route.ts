@@ -7,8 +7,55 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 const pdfjsWorker = require('pdfjs-dist/build/pdf.worker.entry')
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
+// Define types for our resume analysis
+interface TechnicalSkills {
+  programming: string[];
+  webTechnologies: string[];
+  databases: string[];
+  cloud: string[];
+  tools: string[];
+  [key: string]: string[]; // Add index signature
+}
+
+interface SoftSkills {
+  leadership: string[];
+  communication: string[];
+  projectManagement: string[];
+  problemSolving: string[];
+  [key: string]: string[]; // Add index signature
+}
+
+interface ResumeCriteria {
+  technicalSkills: {
+    programming: string[];
+    webTechnologies: string[];
+    databases: string[];
+    cloud: string[];
+    tools: string[];
+  };
+  softSkills: {
+    leadership: string[];
+    communication: string[];
+    projectManagement: string[];
+    problemSolving: string[];
+  };
+  certifications: string[];
+  education: string[];
+  experience: string[];
+  achievements: string[];
+  metrics: string[];
+}
+
+interface ResumeAnalysis {
+  technicalSkills: TechnicalSkills;
+  softSkills: SoftSkills;
+  certifications: string[];
+  metrics: string[];
+  achievements: string[];
+}
+
 // Enhanced keywords and categories for resume analysis
-const RESUME_CRITERIA = {
+const RESUME_CRITERIA: ResumeCriteria = {
   technicalSkills: {
     programming: [
       'javascript', 'python', 'java', 'c++', 'ruby', 'swift', 'kotlin', 'go',
@@ -115,7 +162,19 @@ function isValidResume(text: string): { isValid: boolean; reason?: string } {
   return { isValid: true }
 }
 
-function analyzeResume(text: string) {
+function analyzeResume(text: string): {
+  score: number;
+  professionalAssessment: string;
+  strengths: string[];
+  improvements: string[];
+  keyDifferentiators: string[];
+  details: {
+    technicalSkills: TechnicalSkills;
+    softSkills: SoftSkills;
+    certifications: string[];
+    hasQuantifiableAchievements: boolean;
+  };
+} {
   const textLower = text.toLowerCase()
   const words = text.split(/\s+/)
   
@@ -126,7 +185,7 @@ function analyzeResume(text: string) {
   }
   
   // Initialize scoring categories
-  const analysis = {
+  const analysis: ResumeAnalysis = {
     technicalSkills: {
       programming: [],
       webTechnologies: [],
@@ -197,8 +256,8 @@ function analyzeResume(text: string) {
            words.length >= 300 ? 3 : 0
 
   // Generate professional insights
-  const improvements = []
-  const strengths = []
+  const improvements: string[] = []
+  const strengths: string[] = []
   
   // Technical skills analysis
   if (technicalSkillsCount < 6) {
@@ -235,13 +294,11 @@ function analyzeResume(text: string) {
                                 'Profile needs significant improvement'
 
   // Identify key differentiators
-  const keyDifferentiators = [
-    ...new Set([
-      ...Object.values(analysis.technicalSkills).flat(),
-      ...Object.values(analysis.softSkills).flat(),
-      ...analysis.certifications
-    ])
-  ].slice(0, 10)
+  const keyDifferentiators = Array.from(new Set([
+    ...Object.values(analysis.technicalSkills).flat(),
+    ...Object.values(analysis.softSkills).flat(),
+    ...analysis.certifications
+  ])).slice(0, 10)
 
   return {
     score,
